@@ -18,11 +18,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Run SQL migrations
+      - name: Build connection string
+        id: conn
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "CONN=postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.utwhvnafvtardndgkbjn.supabase.co:5432/postgres" >> $GITHUB_ENV
+
+      - name: Run SQL migrations
         run: |
           for file in $(ls db/migrations/*.sql | sort); do
             echo "Ejecutando $file"
-            psql "$SUPABASE_DB_URL" -f "$file"
+            psql "$CONN" -f "$file"
           done
