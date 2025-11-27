@@ -137,3 +137,22 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Supabase secrets and config
+supabase/.env
+supabase/.temp
+supabase/functions/**/supabase_admin_key*
+supabase/functions/**/supabase_service_key*
+
+# n8n export files (never commit credentials)
+*.json.backup
+n8n-credentials.json
+n8n-encryption-key.txt
+
+# Lovable local files
+*.lovable
+*.lovable-cache
+
+# Local dev notes
+todo.md
+*.local
