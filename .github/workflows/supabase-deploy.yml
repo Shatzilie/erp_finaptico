@@ -1,0 +1,28 @@
+name: Supabase DB push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  db-migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Postgres client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run SQL migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          for file in $(ls db/migrations/*.sql | sort); do
+            echo "Ejecutando $file"
+            psql "$SUPABASE_DB_URL" -f "$file"
+          done
