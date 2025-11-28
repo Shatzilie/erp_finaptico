@@ -1,0 +1,9 @@
+{
+  "version": "2",
+  "functions": {
+    "verify_jwt": false
+  },
+  "deno": {
+    "unstable": true
+  }
+}
