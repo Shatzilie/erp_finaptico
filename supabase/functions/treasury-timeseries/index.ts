@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 serve(async (req) => {
@@ -23,9 +23,48 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const clientCode = url.searchParams.get("client_code");
-    const fromDate = url.searchParams.get("from"); // opcional: yyyy-mm-dd
-    const toDate = url.searchParams.get("to");     // opcional: yyyy-mm-dd
+
+    // 1) Intentamos leer de querystring
+    let clientCode: string | null = url.searchParams.get("client_code");
+    let fromDate: string | null = url.searchParams.get("from");
+    let toDate: string | null = url.searchParams.get("to");
+
+    // 2) Si no viene en query, intentamos leer del body (supabase.functions.invoke)
+    if (req.method !== "GET") {
+      const rawBody = await req.text();
+      if (rawBody) {
+        try {
+          const body = JSON.parse(rawBody) as any;
+
+          // puede venir como { client_code } o como { query: { client_code } }
+          if (!clientCode) {
+            if (typeof body?.client_code === "string") {
+              clientCode = body.client_code;
+            } else if (typeof body?.query?.client_code === "string") {
+              clientCode = body.query.client_code;
+            }
+          }
+
+          if (!fromDate) {
+            if (typeof body?.from === "string") {
+              fromDate = body.from;
+            } else if (typeof body?.query?.from === "string") {
+              fromDate = body.query.from;
+            }
+          }
+
+          if (!toDate) {
+            if (typeof body?.to === "string") {
+              toDate = body.to;
+            } else if (typeof body?.query?.to === "string") {
+              toDate = body.query.to;
+            }
+          }
+        } catch {
+          // body vacío o JSON no válido: ignoramos y seguimos solo con querystring
+        }
+      }
+    }
 
     const client = new Client(dbUrl);
     await client.connect();
