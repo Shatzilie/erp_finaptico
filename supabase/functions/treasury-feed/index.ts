@@ -28,16 +28,15 @@ serve(async (req) => {
       });
     }
 
+    // Leer parámetro opcional ?client_code=CLIENT_001
+    const url = new URL(req.url);
+    const clientCode = url.searchParams.get("client_code") ?? null;
+
     const client = new Client(dbUrl);
     await client.connect();
 
-    const result = await client.queryObject<{
-      client_code: string;
-      instance_code: string;
-      snapshot_date: string;
-      total_balance: number;
-      currency: string;
-    }>`
+    // Construimos la query con filtro opcional por client_code
+    let text = `
       select
         client_code,
         instance_code,
@@ -45,8 +44,25 @@ serve(async (req) => {
         total_balance,
         currency
       from erp_core.v_treasury_client_totals
+    `;
+    const args: unknown[] = [];
+
+    if (clientCode) {
+      text += ` where client_code = $1`;
+      args.push(clientCode);
+    }
+
+    text += `
       order by snapshot_date desc, client_code, instance_code;
     `;
+
+    const result = await client.queryObject<{
+      client_code: string;
+      instance_code: string;
+      snapshot_date: string;
+      total_balance: number;
+      currency: string;
+    }>({ text, args });
 
     await client.end();
 
