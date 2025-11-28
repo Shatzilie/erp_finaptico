@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "supabase/functions/**"
-      - ".github/workflows/supabase-deploy.yml"
+      - ".github/workflows/deploy-edge-functions.yml"
 
 jobs:
   deploy:
@@ -28,9 +28,11 @@ jobs:
       - name: Deploy treasury-feed
         run: |
           supabase functions deploy treasury-feed \
-            --project-ref "$SUPABASE_PROJECT_ID"
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --no-verify-jwt
 
       - name: Deploy treasury-timeseries
         run: |
           supabase functions deploy treasury-timeseries \
-            --project-ref "$SUPABASE_PROJECT_ID"
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --no-verify-jwt
