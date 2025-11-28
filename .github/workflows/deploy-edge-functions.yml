@@ -28,11 +28,9 @@ jobs:
       - name: Deploy treasury-feed
         run: |
           supabase functions deploy treasury-feed \
-            --project-ref "$SUPABASE_PROJECT_ID" \
-            --no-verify-jwt
+            --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Deploy treasury-timeseries
         run: |
           supabase functions deploy treasury-timeseries \
-            --project-ref "$SUPABASE_PROJECT_ID" \
-            --no-verify-jwt
+            --project-ref "$SUPABASE_PROJECT_ID"
