@@ -6,30 +6,31 @@ on:
       - main
     paths:
       - "supabase/functions/**"
-      - ".github/workflows/deploy-edge-functions.yml"
-  workflow_dispatch:
+      - ".github/workflows/supabase-deploy.yml"
 
 jobs:
-  deploy-functions:
+  deploy:
     runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: utwhvnafvtardndgkbjn
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Supabase CLI
+      - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Link Supabase project
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Deploy treasury-feed
         run: |
-          supabase link --project-ref utwhvnafvtardndgkbjn
+          supabase functions deploy treasury-feed \
+            --project-ref "$SUPABASE_PROJECT_ID"
 
-      - name: Deploy all Edge Functions
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Deploy treasury-timeseries
         run: |
-          supabase functions deploy --project-ref utwhvnafvtardndgkbjn --all
+          supabase functions deploy treasury-timeseries \
+            --project-ref "$SUPABASE_PROJECT_ID"
