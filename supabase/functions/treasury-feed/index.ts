@@ -13,8 +13,8 @@ const corsHeaders = {
 type TreasuryRow = {
   client_code: string;
   instance_code: string;
-  snapshot_date: string; // formato 'YYYY-MM-DD'
-  total_balance: number;
+  snapshot_date: string; // 'YYYY-MM-DD'
+  total_balance: string; // numeric en texto
   currency: string;
 };
 
@@ -26,26 +26,26 @@ serve(async (req) => {
     });
   }
 
+  const dbUrl = Deno.env.get("TREASURY_DB_URL");
+
+  if (!dbUrl) {
+    return new Response("Missing TREASURY_DB_URL", {
+      status: 500,
+      headers: corsHeaders,
+    });
+  }
+
+  // Parámetro opcional ?client_code=CLIENT_001
+  const url = new URL(req.url);
+  const clientCode = url.searchParams.get("client_code") ?? null;
+
+  const client = new Client(dbUrl);
+
   try {
-    const dbUrl = Deno.env.get("TREASURY_DB_URL");
-
-    if (!dbUrl) {
-      return new Response("Missing TREASURY_DB_URL", {
-        status: 500,
-        headers: corsHeaders,
-      });
-    }
-
-    // Leer parámetro opcional ?client_code=CLIENT_001
-    const url = new URL(req.url);
-    const clientCode = url.searchParams.get("client_code") ?? null;
-
-    const client = new Client(dbUrl);
     await client.connect();
 
-    // 1) Leer todos los snapshots de la vista (histórico)
     let text = `
-      select
+      select distinct on (client_code, instance_code)
         client_code,
         instance_code,
         snapshot_date,
@@ -61,39 +61,19 @@ serve(async (req) => {
     }
 
     text += `
-      order by snapshot_date desc, client_code, instance_code;
+      order by client_code, instance_code, snapshot_date desc;
     `;
 
     const result = await client.queryObject<TreasuryRow>({ text, args });
-    await client.end();
 
-    const rows = result.rows ?? [];
+    console.log(
+      "[treasury-feed] rows returned",
+      result.rows.length,
+      "clientCode:",
+      clientCode,
+    );
 
-    // 2) Quedarnos solo con el último snapshot por (client_code, instance_code)
-    const latestByKey = new Map<string, TreasuryRow>();
-
-    for (const row of rows) {
-      const key = `${row.client_code}__${row.instance_code}`;
-      const existing = latestByKey.get(key);
-
-      // snapshot_date es 'YYYY-MM-DD', así que la comparación de string funciona
-      if (!existing || row.snapshot_date > existing.snapshot_date) {
-        latestByKey.set(key, row);
-      }
-    }
-
-    const latestRows = Array.from(latestByKey.values()).sort((a, b) => {
-      if (a.client_code === b.client_code) {
-        // ordenar por instancia y fecha descendente por si hay empate visual
-        if (a.instance_code === b.instance_code) {
-          return a.snapshot_date < b.snapshot_date ? 1 : -1;
-        }
-        return a.instance_code.localeCompare(b.instance_code);
-      }
-      return a.client_code.localeCompare(b.client_code);
-    });
-
-    return new Response(JSON.stringify(latestRows), {
+    return new Response(JSON.stringify(result.rows), {
       status: 200,
       headers: {
         ...corsHeaders,
@@ -101,6 +81,8 @@ serve(async (req) => {
       },
     });
   } catch (error) {
+    console.error("[treasury-feed] error", error);
+
     return new Response(
       JSON.stringify({
         error: String(error),
@@ -113,6 +95,12 @@ serve(async (req) => {
         },
       },
     );
+  } finally {
+    try {
+      await client.end();
+    } catch {
+      // ignore
+    }
   }
 });
 // prueba workflow actualizar Edge functions en automatico en supabase prueba 2
